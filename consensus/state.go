@@ -1038,12 +1038,17 @@ func (cs *State) enterNewRound(height int64, round int32) {
 	// before we enterPropose in round 0. If the last block changed the app hash,
 	// we may need an empty "proof" block, and enterPropose immediately.
 	waitForTxs := cs.config.WaitForTxs() && round == 0 && !cs.needProofBlock(height)
+
+	cs.Logger.Info("[enterNewRound]", "CreateEmptyBlocks=", cs.config.CreateEmptyBlocks, "CreateEmptyBlocksInterval", cs.config.CreateEmptyBlocksInterval, "waitForTxs", waitForTxs)
+
 	if waitForTxs {
 		if cs.config.CreateEmptyBlocksInterval > 0 {
+			cs.Logger.Info("[create_block_model]", "scheduleTimeout")
 			cs.scheduleTimeout(cs.config.CreateEmptyBlocksInterval, height, round,
 				cstypes.RoundStepNewRound)
 		}
 	} else {
+		cs.Logger.Info("[create_block_model]", "enterPropose")
 		cs.enterPropose(height, round)
 	}
 }
