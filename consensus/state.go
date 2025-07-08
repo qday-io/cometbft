@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -1031,15 +1032,16 @@ func (cs *State) enterNewRound(height int64, round int32) {
 	// before we enterPropose in round 0. If the last block changed the app hash,
 	// we may need an empty "proof" block, and enterPropose immediately.
 	waitForTxs := cs.config.WaitForTxs() && round == 0 && !cs.needProofBlock(height)
-	cs.Logger.Info("[enterNewRound]", "CreateEmptyBlocks=", cs.config.CreateEmptyBlocks, "CreateEmptyBlocksInterval", cs.config.CreateEmptyBlocksInterval, "waitForTxs", waitForTxs)
+	logger.Info("[enterNewRound]", "CreateEmptyBlocks", cs.config.CreateEmptyBlocks, "CreateEmptyBlocksInterval", cs.config.CreateEmptyBlocksInterval, "waitForTxs", waitForTxs)
 	if waitForTxs {
 		if cs.config.CreateEmptyBlocksInterval > 0 {
-			cs.Logger.Info("[create_block_model]", "scheduleTimeout")
+			cs.Logger.Info("create_block_model", "model", "scheduleTimeout")
 			cs.scheduleTimeout(cs.config.CreateEmptyBlocksInterval, height, round,
 				cstypes.RoundStepNewRound)
 		}
+		cs.Logger.Info("create_block_model", "model", "wait")
 	} else {
-		cs.Logger.Info("[create_block_model]", "enterPropose")
+		logger.Info("create_block_model", "model", "enterPropose")
 		cs.enterPropose(height, round)
 	}
 }
@@ -1047,6 +1049,7 @@ func (cs *State) enterNewRound(height int64, round int32) {
 // needProofBlock returns true on the first height (so the genesis app hash is signed right away)
 // and where the last block (height-1) caused the app hash to change
 func (cs *State) needProofBlock(height int64) bool {
+	cs.Logger.Info("needProofBlock", "height", height, "InitialHeight", cs.state.InitialHeight)
 	if height == cs.state.InitialHeight {
 		return true
 	}
@@ -1057,6 +1060,8 @@ func (cs *State) needProofBlock(height int64) bool {
 		cs.Logger.Info("short-circuited needProofBlock", "height", height, "InitialHeight", cs.state.InitialHeight)
 		return true
 	}
+
+	cs.Logger.Info("needProofBlock", "state.AppHash", hex.EncodeToString(cs.state.AppHash), "lastBlockMeta.Header.AppHash", hex.EncodeToString(lastBlockMeta.Header.AppHash))
 
 	return !bytes.Equal(cs.state.AppHash, lastBlockMeta.Header.AppHash)
 }
